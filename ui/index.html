@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghost Board — Your AI Advisory Board</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+
+    .agent-card {
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .thinking {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+
+    .glow {
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+    }
+  </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+
+  <!-- Header -->
+  <header class="py-8 text-center">
+    <h1 class="text-4xl font-bold mb-2">🔮 Ghost Board</h1>
+    <p class="text-purple-300 text-lg">Your AI Advisory Board</p>
+    <p class="text-gray-400 text-sm mt-2">Legendary thinkers debate your problems before you act</p>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-4xl mx-auto px-4 pb-12">
+
+    <!-- Input Section -->
+    <div id="input-section" class="bg-white/10 backdrop-blur rounded-xl p-6 mb-8 glow">
+      <label class="block text-sm font-medium text-purple-200 mb-2">What problem should the board discuss?</label>
+      <textarea
+        id="problem-input"
+        rows="3"
+        class="w-full px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+        placeholder="Should I quit my job to start a business?"
+      ></textarea>
+      <button
+        id="submit-btn"
+        class="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+      >
+        <span>🔮</span>
+        <span>Convene the Board</span>
+      </button>
+    </div>
+
+    <!-- The Board (Advisors) -->
+    <div id="board-section" class="hidden mb-8">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="flex -space-x-2">
+          <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-lg border-2 border-gray-800">⚫</div>
+          <div class="w-10 h-10 rounded-full bg-yellow-600 flex items-center justify-center text-lg border-2 border-gray-800">💛</div>
+          <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-lg border-2 border-gray-800">💚</div>
+          <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-lg border-2 border-gray-800">🧭</div>
+        </div>
+        <div>
+          <p class="font-medium">The Board</p>
+          <p class="text-sm text-gray-400">Buffett • Bezos • Jobs • Dalai Lama</p>
+        </div>
+      </div>
+
+      <!-- Problem Display -->
+      <div id="problem-display" class="bg-purple-900/30 rounded-lg p-4 mb-6 border border-purple-500/30">
+        <p class="text-sm text-purple-300 font-medium mb-1">📋 Problem</p>
+        <p id="problem-text" class="text-white"></p>
+      </div>
+
+      <!-- Responses Container -->
+      <div id="responses-container" class="space-y-4">
+        <!-- Agent responses will be inserted here -->
+      </div>
+
+      <!-- Follow-up Section (hidden until debate complete) -->
+      <div id="followup-section" class="hidden mt-8 bg-white/10 backdrop-blur rounded-xl p-6">
+        <h3 class="font-semibold mb-4 flex items-center gap-2">
+          <span>💬</span>
+          <span>Ask a Follow-up</span>
+        </h3>
+        <div class="flex gap-2 mb-4 flex-wrap">
+          <button class="followup-agent-btn px-3 py-1.5 rounded-full bg-gray-700 hover:bg-gray-600 text-sm transition-colors" data-agent="buffett">⚫ Buffett</button>
+          <button class="followup-agent-btn px-3 py-1.5 rounded-full bg-gray-700 hover:bg-gray-600 text-sm transition-colors" data-agent="bezos">💛 Bezos</button>
+          <button class="followup-agent-btn px-3 py-1.5 rounded-full bg-gray-700 hover:bg-gray-600 text-sm transition-colors" data-agent="jobs">💚 Jobs</button>
+          <button class="followup-agent-btn px-3 py-1.5 rounded-full bg-gray-700 hover:bg-gray-600 text-sm transition-colors" data-agent="dalai">🧭 Dalai Lama</button>
+        </div>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="followup-input"
+            class="flex-1 px-4 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Ask a follow-up question..."
+          >
+          <button
+            id="followup-btn"
+            class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Ask
+          </button>
+        </div>
+      </div>
+
+      <!-- New Session Button -->
+      <div id="new-session" class="hidden mt-6 text-center">
+        <button
+          id="new-session-btn"
+          class="text-purple-400 hover:text-purple-300 underline"
+        >
+          Start a new session
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const API_BASE = 'http://localhost:5001/api';
+
+    // Elements
+    const inputSection = document.getElementById('input-section');
+    const boardSection = document.getElementById('board-section');
+    const problemInput = document.getElementById('problem-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const problemText = document.getElementById('problem-text');
+    const responsesContainer = document.getElementById('responses-container');
+    const followupSection = document.getElementById('followup-section');
+    const followupInput = document.getElementById('followup-input');
+    const followupBtn = document.getElementById('followup-btn');
+    const newSessionSection = document.getElementById('new-session');
+    const newSessionBtn = document.getElementById('new-session-btn');
+
+    // State
+    let currentProblem = '';
+    let conversationContext = '';
+    let selectedFollowupAgent = 'buffett';
+
+    // Agent colors
+    const agentColors = {
+      orchestrator: 'border-blue-500 bg-blue-500/10',
+      buffett: 'border-gray-500 bg-gray-500/10',
+      bezos: 'border-yellow-500 bg-yellow-500/10',
+      jobs: 'border-green-500 bg-green-500/10',
+      dalai: 'border-orange-500 bg-orange-500/10',
+      synthesis: 'border-purple-500 bg-purple-500/10'
+    };
+
+    // Create agent response card
+    function createAgentCard(agent, isThinking = false) {
+      const card = document.createElement('div');
+      card.className = `agent-card rounded-xl p-5 border-l-4 ${agentColors[agent.agent] || 'border-gray-500 bg-gray-500/10'}`;
+      card.id = `agent-${agent.agent}`;
+
+      if (isThinking) {
+        card.innerHTML = `
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">${agent.emoji}</span>
+            <div>
+              <p class="font-semibold">${agent.name}</p>
+              <p class="text-sm text-gray-400">${agent.role}</p>
+            </div>
+          </div>
+          <div class="thinking text-gray-400">Thinking...</div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">${agent.emoji}</span>
+            <div>
+              <p class="font-semibold">${agent.name}</p>
+              <p class="text-sm text-gray-400">${agent.role}</p>
+            </div>
+          </div>
+          <div class="text-gray-200 whitespace-pre-wrap">${agent.response}</div>
+        `;
+      }
+
+      return card;
+    }
+
+    // Update existing card with response
+    function updateAgentCard(agentKey, response) {
+      const card = document.getElementById(`agent-${agentKey}`);
+      if (card) {
+        const contentDiv = card.querySelector('.thinking') || card.querySelector('.text-gray-200');
+        if (contentDiv) {
+          contentDiv.className = 'text-gray-200 whitespace-pre-wrap';
+          contentDiv.textContent = response;
+        }
+      }
+    }
+
+    // Run the full debate
+    async function runDebate(problem) {
+      currentProblem = problem;
+      problemText.textContent = problem;
+      responsesContainer.innerHTML = '';
+      conversationContext = '';
+
+      inputSection.classList.add('hidden');
+      boardSection.classList.remove('hidden');
+      followupSection.classList.add('hidden');
+      newSessionSection.classList.add('hidden');
+
+      try {
+        // Step 1: Frame the problem
+        let thinkingCard = createAgentCard({ agent: 'orchestrator', emoji: '🔵', name: 'The Orchestrator', role: 'Framing the problem' }, true);
+        responsesContainer.appendChild(thinkingCard);
+
+        const frameRes = await fetch(`${API_BASE}/frame`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ problem })
+        });
+        const frameData = await frameRes.json();
+        updateAgentCard('orchestrator', frameData.response);
+        conversationContext += `FRAMING: ${frameData.response}\n\n`;
+
+        // Step 2: Get each advisor's response
+        const advisors = [
+          { key: 'buffett', emoji: '⚫', name: 'Warren Buffett', role: 'The Skeptic' },
+          { key: 'bezos', emoji: '💛', name: 'Jeff Bezos', role: 'The Builder' },
+          { key: 'jobs', emoji: '💚', name: 'Steve Jobs', role: 'The Simplifier' },
+          { key: 'dalai', emoji: '🧭', name: 'Dalai Lama', role: 'The Compass' }
+        ];
+
+        for (const advisor of advisors) {
+          // Show thinking state
+          thinkingCard = createAgentCard({ agent: advisor.key, emoji: advisor.emoji, name: advisor.name, role: advisor.role }, true);
+          responsesContainer.appendChild(thinkingCard);
+
+          // Get response
+          const adviseRes = await fetch(`${API_BASE}/advise`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              problem,
+              agent: advisor.key,
+              context: conversationContext
+            })
+          });
+          const adviseData = await adviseRes.json();
+          updateAgentCard(advisor.key, adviseData.response);
+          conversationContext += `${advisor.name.toUpperCase()}: ${adviseData.response}\n\n`;
+        }
+
+        // Step 3: Synthesize
+        thinkingCard = createAgentCard({ agent: 'synthesis', emoji: '🎯', name: 'Final Synthesis', role: 'Recommendation' }, true);
+        responsesContainer.appendChild(thinkingCard);
+
+        const synthRes = await fetch(`${API_BASE}/synthesize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            problem,
+            responses: conversationContext
+          })
+        });
+        const synthData = await synthRes.json();
+        updateAgentCard('synthesis', synthData.response);
+        conversationContext += `SYNTHESIS: ${synthData.response}\n\n`;
+
+        // Show follow-up section
+        followupSection.classList.remove('hidden');
+        newSessionSection.classList.remove('hidden');
+
+      } catch (error) {
+        console.error('Error:', error);
+        responsesContainer.innerHTML = `
+          <div class="bg-red-500/20 border border-red-500 rounded-lg p-4 text-red-200">
+            <p class="font-semibold">Error connecting to server</p>
+            <p class="text-sm mt-1">Make sure the server is running: python server.py</p>
+          </div>
+        `;
+      }
+    }
+
+    // Handle follow-up
+    async function askFollowup() {
+      const question = followupInput.value.trim();
+      if (!question) return;
+
+      followupInput.value = '';
+
+      // Show thinking card
+      const advisor = {
+        buffett: { emoji: '⚫', name: 'Warren Buffett', role: 'The Skeptic' },
+        bezos: { emoji: '💛', name: 'Jeff Bezos', role: 'The Builder' },
+        jobs: { emoji: '💚', name: 'Steve Jobs', role: 'The Simplifier' },
+        dalai: { emoji: '🧭', name: 'Dalai Lama', role: 'The Compass' }
+      }[selectedFollowupAgent];
+
+      const thinkingCard = createAgentCard({
+        agent: `followup-${Date.now()}`,
+        emoji: advisor.emoji,
+        name: advisor.name,
+        role: `Answering: "${question.slice(0, 30)}..."`
+      }, true);
+      responsesContainer.appendChild(thinkingCard);
+
+      try {
+        const res = await fetch(`${API_BASE}/followup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question,
+            agent: selectedFollowupAgent,
+            context: `ORIGINAL PROBLEM: ${currentProblem}\n\nPREVIOUS DISCUSSION:\n${conversationContext}`
+          })
+        });
+        const data = await res.json();
+
+        // Update the card
+        const contentDiv = thinkingCard.querySelector('.thinking');
+        if (contentDiv) {
+          contentDiv.className = 'text-gray-200 whitespace-pre-wrap';
+          contentDiv.textContent = data.response;
+        }
+
+        // Update role text
+        const roleP = thinkingCard.querySelector('.text-gray-400');
+        if (roleP) roleP.textContent = advisor.role;
+
+        // Scroll to bottom
+        thinkingCard.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    // Event listeners
+    submitBtn.addEventListener('click', () => {
+      const problem = problemInput.value.trim();
+      if (problem) runDebate(problem);
+    });
+
+    problemInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const problem = problemInput.value.trim();
+        if (problem) runDebate(problem);
+      }
+    });
+
+    // Follow-up agent selection
+    document.querySelectorAll('.followup-agent-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.followup-agent-btn').forEach(b => b.classList.remove('bg-purple-600'));
+        btn.classList.add('bg-purple-600');
+        selectedFollowupAgent = btn.dataset.agent;
+      });
+    });
+
+    followupBtn.addEventListener('click', askFollowup);
+    followupInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') askFollowup();
+    });
+
+    newSessionBtn.addEventListener('click', () => {
+      inputSection.classList.remove('hidden');
+      boardSection.classList.add('hidden');
+      problemInput.value = '';
+      responsesContainer.innerHTML = '';
+      conversationContext = '';
+    });
+
+    // Select first follow-up agent by default
+    document.querySelector('.followup-agent-btn').classList.add('bg-purple-600');
+  </script>
+
+</body>
+</html>
