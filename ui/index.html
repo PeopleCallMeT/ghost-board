@@ -34,6 +34,50 @@
     .glow {
       box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
     }
+
+    /* Fix select dropdown on dark background */
+    select option {
+      background-color: #1a1a2e;
+      color: white;
+    }
+
+    /* Mobile-friendly styles */
+    @media (max-width: 640px) {
+      header h1 {
+        font-size: 1.75rem;
+      }
+
+      .agent-card {
+        padding: 1rem;
+      }
+
+      .agent-card .text-2xl {
+        font-size: 1.5rem;
+      }
+
+      .followup-agent-checkbox {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+      }
+
+      #followup-section {
+        padding: 1rem;
+      }
+
+      #followup-section .flex.gap-2 {
+        flex-direction: column;
+      }
+
+      #followup-btn {
+        width: 100%;
+      }
+
+      .flex.-space-x-2 > div {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.875rem;
+      }
+    }
   </style>
 </head>
 <body class="gradient-bg min-h-screen text-white">
@@ -50,6 +94,24 @@
 
     <!-- Input Section -->
     <div id="input-section" class="bg-white/10 backdrop-blur rounded-xl p-6 mb-8 glow">
+      <!-- Industry Preset Selector -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-purple-200 mb-2">Board Focus</label>
+        <select
+          id="preset-select"
+          class="w-full px-4 py-2 bg-white/10 border border-purple-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+        >
+          <option value="general">🎯 General Strategy</option>
+          <option value="startup">🚀 Startup / Launch</option>
+          <option value="career">💼 Career Decision</option>
+          <option value="product">📦 Product Strategy</option>
+          <option value="marketing">📣 Marketing / Growth</option>
+          <option value="hiring">👥 Hiring / Team</option>
+          <option value="pricing">💰 Pricing / Revenue</option>
+          <option value="pivot">🔄 Pivot / Change</option>
+        </select>
+      </div>
+
       <label class="block text-sm font-medium text-purple-200 mb-2">What problem should the board discuss?</label>
       <textarea
         id="problem-input"
@@ -131,6 +193,14 @@
             Ask
           </button>
         </div>
+        <!-- Re-synthesize button -->
+        <button
+          id="resynthesize-btn"
+          class="hidden mt-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <span>🎯</span>
+          <span>Re-synthesize with Follow-ups</span>
+        </button>
       </div>
 
       <!-- New Session Button -->
@@ -165,6 +235,18 @@
     // State
     let currentProblem = '';
     let conversationContext = '';
+
+    // Industry preset contexts
+    const presetContexts = {
+      general: '',
+      startup: 'CONTEXT: This is a startup/new venture decision. Consider runway, market timing, competitive dynamics, and founder fit.',
+      career: 'CONTEXT: This is a career decision. Consider long-term trajectory, skill development, financial security, and personal fulfillment.',
+      product: 'CONTEXT: This is a product strategy decision. Consider user needs, market positioning, technical feasibility, and competitive differentiation.',
+      marketing: 'CONTEXT: This is a marketing/growth decision. Consider customer acquisition cost, channel fit, brand positioning, and scalability.',
+      hiring: 'CONTEXT: This is a hiring/team decision. Consider culture fit, skill gaps, timing, and long-term team dynamics.',
+      pricing: 'CONTEXT: This is a pricing/revenue decision. Consider value perception, market positioning, unit economics, and competitive landscape.',
+      pivot: 'CONTEXT: This is about a major change or pivot. Consider sunk costs (ignore them), new opportunity size, team capabilities, and timing.'
+    };
 
     // Agent colors
     const agentColors = {
@@ -223,8 +305,13 @@
 
     // Run the full debate
     async function runDebate(problem) {
-      currentProblem = problem;
-      problemText.textContent = problem;
+      // Get preset context
+      const preset = document.getElementById('preset-select').value;
+      const presetContext = presetContexts[preset] || '';
+      const fullProblem = presetContext ? `${presetContext}\n\nPROBLEM: ${problem}` : problem;
+
+      currentProblem = fullProblem;
+      problemText.textContent = problem; // Show original problem to user
       responsesContainer.innerHTML = '';
       conversationContext = '';
 
@@ -241,7 +328,7 @@
         const frameRes = await fetch(`${API_BASE}/frame`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ problem })
+          body: JSON.stringify({ problem: fullProblem })
         });
         const frameData = await frameRes.json();
         updateAgentCard('orchestrator', frameData.response);
@@ -265,7 +352,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              problem,
+              problem: fullProblem,
               agent: advisor.key,
               context: conversationContext
             })
@@ -283,7 +370,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            problem,
+            problem: fullProblem,
             responses: conversationContext
           })
         });
@@ -403,6 +490,62 @@
 
       // Scroll to the last response
       responsesContainer.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+
+      // Show re-synthesize button after follow-ups
+      document.getElementById('resynthesize-btn').classList.remove('hidden');
+    }
+
+    // Re-synthesize with all context including follow-ups
+    async function resynthesize() {
+      const resynthBtn = document.getElementById('resynthesize-btn');
+      resynthBtn.disabled = true;
+      resynthBtn.innerHTML = '<span class="thinking">Re-synthesizing...</span>';
+
+      // Show thinking card
+      const thinkingCard = createAgentCard({
+        agent: `resynth-${Date.now()}`,
+        emoji: '🎯',
+        name: 'Updated Synthesis',
+        role: 'Revised recommendation with follow-ups'
+      }, true);
+      responsesContainer.appendChild(thinkingCard);
+
+      try {
+        const res = await fetch(`${API_BASE}/synthesize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            problem: currentProblem,
+            responses: conversationContext
+          })
+        });
+        const data = await res.json();
+
+        // Update the card
+        const contentDiv = thinkingCard.querySelector('.thinking');
+        if (contentDiv) {
+          contentDiv.className = 'text-gray-200 whitespace-pre-wrap';
+          contentDiv.textContent = data.response;
+        }
+
+        // Update context
+        conversationContext += `UPDATED SYNTHESIS: ${data.response}\n\n`;
+
+        // Scroll to the synthesis
+        thinkingCard.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (error) {
+        console.error('Error:', error);
+        const contentDiv = thinkingCard.querySelector('.thinking');
+        if (contentDiv) {
+          contentDiv.className = 'text-red-300';
+          contentDiv.textContent = 'Error getting synthesis';
+        }
+      }
+
+      // Reset button
+      resynthBtn.disabled = false;
+      resynthBtn.innerHTML = '<span>🎯</span><span>Re-synthesize with Follow-ups</span>';
     }
 
     // Event listeners
@@ -424,12 +567,16 @@
       if (e.key === 'Enter') askFollowup();
     });
 
+    document.getElementById('resynthesize-btn').addEventListener('click', resynthesize);
+
     newSessionBtn.addEventListener('click', () => {
       inputSection.classList.remove('hidden');
       boardSection.classList.add('hidden');
       problemInput.value = '';
       responsesContainer.innerHTML = '';
       conversationContext = '';
+      document.getElementById('resynthesize-btn').classList.add('hidden');
+      document.getElementById('preset-select').value = 'general';
     });
   </script>
 
