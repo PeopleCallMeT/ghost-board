@@ -12,7 +12,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__, static_folder='ui')
+# Get absolute path to this file's directory (works in production)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UI_DIR = os.path.join(BASE_DIR, 'ui')
+
+app = Flask(__name__, static_folder=UI_DIR)
 CORS(app)
 
 client = anthropic.Anthropic()
@@ -133,11 +137,11 @@ def call_agent(system_prompt: str, user_message: str, context: str = "") -> str:
 
 @app.route('/')
 def index():
-    return send_from_directory('ui', 'index.html')
+    return send_from_directory(UI_DIR, 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('ui', path)
+    return send_from_directory(UI_DIR, path)
 
 @app.route('/api/agents', methods=['GET'])
 def get_agents():
